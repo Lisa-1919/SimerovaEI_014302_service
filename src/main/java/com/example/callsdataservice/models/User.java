@@ -16,7 +16,7 @@ public class User {
     private String email;
     @Column(name="password")
     private String password;
-    @Column(name="accountImgUrl")
+    @Column(name="account_img_url")
     private String accountImgUrl;
 
     @Transient
@@ -34,6 +34,14 @@ public class User {
         this.username = username;
         this.email = email;
         this.password = password;
+    }
+
+    public User(Long id, String username, String email, String password, String accountImgUrl) {
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        this.accountImgUrl = accountImgUrl;
     }
 
     public User(String username, String email, String password) {
@@ -97,4 +105,6 @@ public class User {
     public void setRoleSet(Set<Role> roleSet) {
         this.roleSet = roleSet;
     }
+
+
 }
