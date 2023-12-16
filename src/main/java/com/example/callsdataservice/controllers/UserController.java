@@ -2,35 +2,35 @@ package com.example.callsdataservice.controllers;
 
 import com.example.callsdataservice.models.Role;
 import com.example.callsdataservice.models.User;
-import com.example.callsdataservice.payload.request.LoginRequest;
-import com.example.callsdataservice.payload.request.SignupRequest;
+import com.example.callsdataservice.payload.request.*;
 import com.example.callsdataservice.payload.response.JwtResponse;
 import com.example.callsdataservice.payload.response.MessageResponse;
 import com.example.callsdataservice.repository.RoleRepository;
 import com.example.callsdataservice.repository.UserRepository;
 import com.example.callsdataservice.security.jwt.JwtUtils;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import com.example.callsdataservice.security.services.UserDetailsImpl;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
+
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/auth")
 public class UserController {
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -66,6 +66,7 @@ public class UserController {
                 userDetails.getUsername(),
                 userDetails.getEmail(),
                 userDetails.getImgUrl(),
+                userDetails.getLanguage(),
                 roles));
     }
 
@@ -83,7 +84,6 @@ public class UserController {
                     .body(new MessageResponse("Error: Email is already in use!"));
         }
 
-        // Create new user's account
         User user = new User(signUpRequest.getUsername(),
                 signUpRequest.getEmail(),
                 encoder.encode(signUpRequest.getPassword()));
@@ -123,29 +123,132 @@ public class UserController {
 
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
-
-    @PostMapping("/upload_img")
-    public ResponseEntity<String> uploadImage(@RequestHeader("Authorization") String token, @RequestPart("image") MultipartFile image) {
-        // Validate the JWT token
-        if (token == null || !token.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
+    @CrossOrigin(origins = "*")
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request) {
+        String token = jwtUtils.extractTokenFromRequest(request);
+        if (token != null && jwtUtils.validateJwtToken(token)) {
+            return ResponseEntity
+                    .ok()
+                    .body(new MessageResponse("logout"));
         }
-
-        String jwt = token.substring(7);
-        if (!jwtUtils.validateJwtToken(jwt)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
-        }
-
-        // Extract the user ID from the token
-        String username = jwtUtils.getUserNameFromJwtToken(jwt);
-        User user = userRepository.findByUsername(username).orElse(null);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
-        }
-
-        // Handle the image upload
-        // You can save the image or perform any other necessary operations here
-
-        return ResponseEntity.ok("Image uploaded successfully");
+        return ResponseEntity
+                .badRequest()
+                .body(new MessageResponse("Something went wrong"));
     }
+
+    @CrossOrigin(origins = "*")
+    @PostMapping("/delete")
+    public ResponseEntity<?> delete(HttpServletRequest request) {
+        String token = jwtUtils.extractTokenFromRequest(request);
+        if (token != null && jwtUtils.validateJwtToken(token)) {
+            String username = jwtUtils.getUserNameFromJwtToken(token);
+            User user = userRepository.findByUsername(username).orElse(null);
+            userRepository.delete(user);
+            return ResponseEntity
+                    .ok()
+                    .body(new MessageResponse("deleted"));
+        }
+        return ResponseEntity
+                .badRequest()
+                .body(new MessageResponse("Something went wrong"));
+    }
+
+    @PostMapping("/changepassword")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest changePasswordRequest, HttpServletRequest httpServletRequest) {
+        String token = jwtUtils.extractTokenFromRequest(httpServletRequest);
+        if (token != null && jwtUtils.validateJwtToken(token)) {
+            String username = changePasswordRequest.getUsername();
+            String oldPassword = changePasswordRequest.getOldPassword();
+            String newPassword = changePasswordRequest.getNewPassword();
+
+            Optional<User> optionalUser = userRepository.findByUsername(username);
+            if (optionalUser.isPresent()) {
+                User user = optionalUser.get();
+                if (encoder.matches(oldPassword, user.getPassword())) {
+                    String encodedNewPassword = encoder.encode(newPassword);
+                    user.setPassword(encodedNewPassword);
+                    userRepository.save(user);
+
+                    // Retrieve the updated UserDetails object
+                    UserDetailsImpl userDetails = new UserDetailsImpl(user);
+
+                    // Generate a new token
+                    Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    String newToken = jwtUtils.generateJwtToken(authentication);
+                    List<String> roles = userDetails.getAuthorities().stream()
+                            .map(item -> item.getAuthority())
+                            .collect(Collectors.toList());
+
+                    return ResponseEntity.ok(new JwtResponse(newToken,
+                            userDetails.getId(),
+                            userDetails.getUsername(),
+                            userDetails.getEmail(),
+                            userDetails.getImgUrl(),
+                            userDetails.getLanguage(),
+                            roles));
+                }
+            }
+        }
+
+        return ResponseEntity
+                .badRequest()
+                .body(new MessageResponse("Something went wrong"));
+    }
+
+
+    @PostMapping("/changelanguage")
+    public ResponseEntity<?> changeLanguage(@Valid @RequestBody ChangeLanguageRequest changeLanguageRequest, HttpServletRequest httpServletRequest) {
+        String token = jwtUtils.extractTokenFromRequest(httpServletRequest);
+        if (token != null && jwtUtils.validateJwtToken(token)) {
+            String username = changeLanguageRequest.getUsername();
+            String language = changeLanguageRequest.getLanguage();
+            Optional<User> optionalUser = userRepository.findByUsername(username);
+            if (optionalUser.isPresent()) {
+                User user = optionalUser.get();
+                user.setLanguage(language);
+                userRepository.save(user);
+                return ResponseEntity
+                        .ok()
+                        .body(new MessageResponse("Data updated"));
+            }
+        }
+        return ResponseEntity
+                .badRequest()
+                .body(new MessageResponse("Something went wrong"));
+    }
+
+    @CrossOrigin(origins = "*")
+    @PostMapping("/upload_img")
+    public ResponseEntity<?> uploadImage(@RequestParam("image") MultipartFile image, HttpServletRequest httpServletRequest) {
+        String token = jwtUtils.extractTokenFromRequest(httpServletRequest);
+        if (token != null && jwtUtils.validateJwtToken(token)) {
+            String username = jwtUtils.getUserNameFromJwtToken(token);
+            User user = userRepository.findByUsername(username).orElse(null);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
+            }
+            // Check if image is present
+            if (image != null) {
+                // Generate a unique filename for the image
+                String resultImgName = UUID.randomUUID() + "." + image.getOriginalFilename();
+                try {
+                    // Save the image to a specific directory
+                    image.transferTo(new File("src/main/resources/uploads/" + resultImgName));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                // Update the user's accountImgUrl with the new image filename
+                user.setAccountImgUrl(resultImgName);
+                userRepository.save(user);
+                return ResponseEntity
+                        .ok()
+                        .body(new MessageResponse("Data updated"));
+            }
+        }
+        return ResponseEntity
+                .badRequest()
+                .body(new MessageResponse("Something went wrong"));
+    }
+
 }

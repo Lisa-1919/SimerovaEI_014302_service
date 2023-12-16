@@ -18,6 +18,8 @@ public class User {
     private String password;
     @Column(name="account_img_url")
     private String accountImgUrl;
+    @Column(name = "language")
+    private String language;
 
     @Transient
     private UserStatus status;
@@ -36,12 +38,13 @@ public class User {
         this.password = password;
     }
 
-    public User(Long id, String username, String email, String password, String accountImgUrl) {
+    public User(Long id, String username, String email, String password, String accountImgUrl, String language) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.password = password;
         this.accountImgUrl = accountImgUrl;
+        this.language = language;
     }
 
     public User(String username, String email, String password) {
@@ -98,9 +101,18 @@ public class User {
         this.accountImgUrl = accountImgUrl;
     }
 
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+
     public Set<Role> getRoleSet() {
         return roleSet;
     }
+
 
     public void setRoleSet(Set<Role> roleSet) {
         this.roleSet = roleSet;

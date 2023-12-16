@@ -8,16 +8,17 @@ public class JwtResponse {
     private Long id;
     private String username;
     private String email;
-
     private String imgUrl;
+    private String language;
     private List<String> roles;
 
-    public JwtResponse(String accessToken, Long id, String username, String email, String imgUrl, List<String> roles) {
+    public JwtResponse(String accessToken, Long id, String username, String email, String imgUrl, String language, List<String> roles) {
         this.token = accessToken;
         this.id = id;
         this.username = username;
         this.email = email;
         this.imgUrl = imgUrl;
+        this.language = language;
         this.roles = roles;
     }
 
@@ -67,6 +68,14 @@ public class JwtResponse {
 
     public void setImgUrl(String imgUrl) {
         this.imgUrl = imgUrl;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
     }
 
     public List<String> getRoles() {
