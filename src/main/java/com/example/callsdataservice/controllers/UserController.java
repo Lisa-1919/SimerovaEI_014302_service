@@ -2,32 +2,33 @@ package com.example.callsdataservice.controllers;
 
 import com.example.callsdataservice.models.Role;
 import com.example.callsdataservice.models.User;
-import com.example.callsdataservice.payload.request.*;
+import com.example.callsdataservice.payload.request.ChangeLanguageRequest;
+import com.example.callsdataservice.payload.request.ChangePasswordRequest;
+import com.example.callsdataservice.payload.request.LoginRequest;
+import com.example.callsdataservice.payload.request.SignupRequest;
 import com.example.callsdataservice.payload.response.JwtResponse;
 import com.example.callsdataservice.payload.response.MessageResponse;
 import com.example.callsdataservice.repository.RoleRepository;
 import com.example.callsdataservice.repository.UserRepository;
 import com.example.callsdataservice.security.jwt.JwtUtils;
 import com.example.callsdataservice.security.services.UserDetailsImpl;
+import com.example.callsdataservice.security.services.UserDetailsServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
@@ -47,6 +48,14 @@ public class UserController {
 
     @Autowired
     private JwtUtils jwtUtils;
+
+    @Autowired
+    private UserDetailsServiceImpl userDetailsService;
+
+    @GetMapping("/all")
+    public List<User> all(){
+        return userDetailsService.getAll();
+    }
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {

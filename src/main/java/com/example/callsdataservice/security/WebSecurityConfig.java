@@ -66,6 +66,7 @@ public class WebSecurityConfig{
                                 .requestMatchers("/changelanguage").permitAll()
                                 .requestMatchers("/logout").permitAll()
                                 .requestMatchers("/delete").permitAll()
+                                .requestMatchers("/all").permitAll()
                                 .anyRequest().authenticated()
                 ).logout(LogoutConfigurer::permitAll);
 
