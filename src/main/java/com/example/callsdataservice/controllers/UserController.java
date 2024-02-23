@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -65,7 +66,6 @@ public class UserController {
                 userDetails.getId(),
                 userDetails.getUsername(),
                 userDetails.getEmail(),
-                userDetails.getImgUrl(),
                 userDetails.getLanguage(),
                 roles));
     }
@@ -104,12 +104,6 @@ public class UserController {
                         roles.add(adminRole);
 
                         break;
-//                    case "mod":
-//                        Role modRole = roleRepository.findByName(ERole.ROLE_MODERATOR)
-//                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-//                        roles.add(modRole);
-//
-//                        break;
                     default:
                         Role userRole = (Role) roleRepository.findByName("USER")
                                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
@@ -123,25 +117,24 @@ public class UserController {
 
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
+
     @CrossOrigin(origins = "*")
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request) {
-        String token = jwtUtils.extractTokenFromRequest(request);
-        if (token != null && jwtUtils.validateJwtToken(token)) {
+        if (jwtUtils.validateJwtToken(request)) {
             return ResponseEntity
                     .ok()
                     .body(new MessageResponse("logout"));
         }
         return ResponseEntity
-                .badRequest()
-                .body(new MessageResponse("Something went wrong"));
+                .status(401).body(new MessageResponse("Unauthorized"));
     }
 
     @CrossOrigin(origins = "*")
     @PostMapping("/delete")
     public ResponseEntity<?> delete(HttpServletRequest request) {
         String token = jwtUtils.extractTokenFromRequest(request);
-        if (token != null && jwtUtils.validateJwtToken(token)) {
+        if (jwtUtils.validateJwtToken(request)) {
             String username = jwtUtils.getUserNameFromJwtToken(token);
             User user = userRepository.findByUsername(username).orElse(null);
             userRepository.delete(user);
@@ -150,14 +143,12 @@ public class UserController {
                     .body(new MessageResponse("deleted"));
         }
         return ResponseEntity
-                .badRequest()
-                .body(new MessageResponse("Something went wrong"));
+                .status(401).body(new MessageResponse("Unauthorized"));
     }
 
     @PostMapping("/changepassword")
     public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest changePasswordRequest, HttpServletRequest httpServletRequest) {
-        String token = jwtUtils.extractTokenFromRequest(httpServletRequest);
-        if (token != null && jwtUtils.validateJwtToken(token)) {
+        if (jwtUtils.validateJwtToken(httpServletRequest)) {
             String username = changePasswordRequest.getUsername();
             String oldPassword = changePasswordRequest.getOldPassword();
             String newPassword = changePasswordRequest.getNewPassword();
@@ -169,38 +160,33 @@ public class UserController {
                     String encodedNewPassword = encoder.encode(newPassword);
                     user.setPassword(encodedNewPassword);
                     userRepository.save(user);
-
-                    // Retrieve the updated UserDetails object
                     UserDetailsImpl userDetails = new UserDetailsImpl(user);
-
-                    // Generate a new token
                     Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     String newToken = jwtUtils.generateJwtToken(authentication);
                     List<String> roles = userDetails.getAuthorities().stream()
-                            .map(item -> item.getAuthority())
+                            .map(GrantedAuthority::getAuthority)
                             .collect(Collectors.toList());
-
                     return ResponseEntity.ok(new JwtResponse(newToken,
                             userDetails.getId(),
                             userDetails.getUsername(),
                             userDetails.getEmail(),
-                            userDetails.getImgUrl(),
                             userDetails.getLanguage(),
                             roles));
                 }
+                return ResponseEntity
+                        .badRequest()
+                        .body(new MessageResponse("Something went wrong"));
             }
-        }
 
+        }
         return ResponseEntity
-                .badRequest()
-                .body(new MessageResponse("Something went wrong"));
+                .status(401).body(new MessageResponse("Unauthorized"));
     }
 
-
     @PostMapping("/changelanguage")
-    public ResponseEntity<?> changeLanguage(@Valid @RequestBody ChangeLanguageRequest changeLanguageRequest, HttpServletRequest httpServletRequest) {
-        String token = jwtUtils.extractTokenFromRequest(httpServletRequest);
-        if (token != null && jwtUtils.validateJwtToken(token)) {
+    public ResponseEntity<?> changeLanguage(@Valid @RequestBody ChangeLanguageRequest
+                                                    changeLanguageRequest, HttpServletRequest httpServletRequest) {
+        if (jwtUtils.validateJwtToken(httpServletRequest)) {
             String username = changeLanguageRequest.getUsername();
             String language = changeLanguageRequest.getLanguage();
             Optional<User> optionalUser = userRepository.findByUsername(username);
@@ -212,43 +198,11 @@ public class UserController {
                         .ok()
                         .body(new MessageResponse("Data updated"));
             }
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Something went wrong"));
         }
         return ResponseEntity
-                .badRequest()
-                .body(new MessageResponse("Something went wrong"));
+                .status(401).body(new MessageResponse("Unauthorized"));
     }
-
-    @CrossOrigin(origins = "*")
-    @PostMapping("/upload_img")
-    public ResponseEntity<?> uploadImage(@RequestParam("image") MultipartFile image, HttpServletRequest httpServletRequest) {
-        String token = jwtUtils.extractTokenFromRequest(httpServletRequest);
-        if (token != null && jwtUtils.validateJwtToken(token)) {
-            String username = jwtUtils.getUserNameFromJwtToken(token);
-            User user = userRepository.findByUsername(username).orElse(null);
-            if (user == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
-            }
-            // Check if image is present
-            if (image != null) {
-                // Generate a unique filename for the image
-                String resultImgName = UUID.randomUUID() + "." + image.getOriginalFilename();
-                try {
-                    // Save the image to a specific directory
-                    image.transferTo(new File("src/main/resources/uploads/" + resultImgName));
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                // Update the user's accountImgUrl with the new image filename
-                user.setAccountImgUrl(resultImgName);
-                userRepository.save(user);
-                return ResponseEntity
-                        .ok()
-                        .body(new MessageResponse("Data updated"));
-            }
-        }
-        return ResponseEntity
-                .badRequest()
-                .body(new MessageResponse("Something went wrong"));
-    }
-
 }
