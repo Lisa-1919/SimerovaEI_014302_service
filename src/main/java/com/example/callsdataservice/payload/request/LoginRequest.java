@@ -12,6 +12,11 @@ public class LoginRequest {
         return username;
     }
 
+    public LoginRequest(String username, String password) {
+        this.username = username;
+        this.password = password;
+    }
+
     public void setUsername(String username) {
         this.username = username;
     }
