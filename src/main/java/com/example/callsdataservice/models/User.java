@@ -16,11 +16,8 @@ public class User {
     private String email;
     @Column(name="password")
     private String password;
-    @Column(name="accountImgUrl")
-    private String accountImgUrl;
-
-    @Transient
-    private UserStatus status;
+    @Column(name = "language")
+    private String language;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name="user_role",
@@ -36,10 +33,22 @@ public class User {
         this.password = password;
     }
 
+    public User(Long id, String username, String email, String password, String accountImgUrl, String language) {
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        this.language = language;
+    }
+
     public User(String username, String email, String password) {
         this.username = username;
         this.email = email;
         this.password = password;
+    }
+
+    public User(String username) {
+        this.username = username;
     }
 
     public Long getId() {
@@ -74,27 +83,22 @@ public class User {
         this.password = password;
     }
 
-    public UserStatus getStatus() {
-        return status;
+    public String getLanguage() {
+        return language;
     }
 
-    public void setStatus(UserStatus status) {
-        this.status = status;
-    }
-
-    public String getAccountImgUrl() {
-        return accountImgUrl;
-    }
-
-    public void setAccountImgUrl(String accountImgUrl) {
-        this.accountImgUrl = accountImgUrl;
+    public void setLanguage(String language) {
+        this.language = language;
     }
 
     public Set<Role> getRoleSet() {
         return roleSet;
     }
 
+
     public void setRoleSet(Set<Role> roleSet) {
         this.roleSet = roleSet;
     }
+
+
 }

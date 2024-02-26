@@ -1,10 +1,11 @@
 package com.example.callsdataservice.models;
 
 import jakarta.persistence.*;
+import org.springframework.security.core.GrantedAuthority;
 
 @Table(name = "roles")
 @Entity
-public class Role {
+public class Role implements GrantedAuthority {
     @Id@GeneratedValue(strategy = GenerationType.AUTO)
     private int id;
     @Column(name = "name")
@@ -32,5 +33,10 @@ public class Role {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    @Override
+    public String getAuthority() {
+        return name;
     }
 }
