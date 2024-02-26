@@ -12,6 +12,12 @@ public class ChangePasswordRequest {
     @NotBlank
     private String newPassword;
 
+    public ChangePasswordRequest(String username, String oldPassword, String newPassword) {
+        this.username = username;
+        this.oldPassword = oldPassword;
+        this.newPassword = newPassword;
+    }
+
     public String getUsername() {
         return username;
     }

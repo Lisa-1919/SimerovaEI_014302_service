@@ -60,7 +60,6 @@ public class JwtUtils {
         } catch (IllegalArgumentException e) {
             logger.error("JWT claims string is empty: {}", e.getMessage());
         }
-
         return false;
     }
 
@@ -70,10 +69,6 @@ public class JwtUtils {
             return bearerToken.substring(7);
         }
         return null;
-    }
-
-    public void invalidateToken(String token) {
-
     }
 
 }

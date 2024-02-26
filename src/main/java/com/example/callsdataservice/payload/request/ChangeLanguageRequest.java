@@ -9,6 +9,11 @@ public class ChangeLanguageRequest {
     @NotBlank
     private String language;
 
+    public ChangeLanguageRequest(String username, String language) {
+        this.username = username;
+        this.language = language;
+    }
+
     public String getUsername() {
         return username;
     }

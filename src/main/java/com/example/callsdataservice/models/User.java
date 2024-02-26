@@ -16,13 +16,8 @@ public class User {
     private String email;
     @Column(name="password")
     private String password;
-    @Column(name="account_img_url")
-    private String accountImgUrl;
     @Column(name = "language")
     private String language;
-
-    @Transient
-    private UserStatus status;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name="user_role",
@@ -43,7 +38,6 @@ public class User {
         this.username = username;
         this.email = email;
         this.password = password;
-        this.accountImgUrl = accountImgUrl;
         this.language = language;
     }
 
@@ -51,6 +45,10 @@ public class User {
         this.username = username;
         this.email = email;
         this.password = password;
+    }
+
+    public User(String username) {
+        this.username = username;
     }
 
     public Long getId() {
@@ -83,22 +81,6 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public UserStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(UserStatus status) {
-        this.status = status;
-    }
-
-    public String getAccountImgUrl() {
-        return accountImgUrl;
-    }
-
-    public void setAccountImgUrl(String accountImgUrl) {
-        this.accountImgUrl = accountImgUrl;
     }
 
     public String getLanguage() {

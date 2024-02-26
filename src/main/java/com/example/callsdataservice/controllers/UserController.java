@@ -53,6 +53,7 @@ public class UserController {
     private UserDetailsServiceImpl userDetailsService;
 
     @GetMapping("/all")
+    @ResponseBody
     public List<User> all(){
         return userDetailsService.getAll();
     }
@@ -67,6 +68,7 @@ public class UserController {
         String jwt = jwtUtils.generateJwtToken(authentication);
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
