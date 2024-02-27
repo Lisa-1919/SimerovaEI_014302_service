@@ -2,17 +2,16 @@ package com.example.callsdataservice.controllers;
 
 import com.example.callsdataservice.models.Role;
 import com.example.callsdataservice.models.User;
-import com.example.callsdataservice.payload.request.ChangeLanguageRequest;
-import com.example.callsdataservice.payload.request.ChangePasswordRequest;
-import com.example.callsdataservice.payload.request.LoginRequest;
-import com.example.callsdataservice.payload.request.SignupRequest;
+import com.example.callsdataservice.payload.request.*;
 import com.example.callsdataservice.payload.response.JwtResponse;
 import com.example.callsdataservice.payload.response.MessageResponse;
 import com.example.callsdataservice.repository.RoleRepository;
 import com.example.callsdataservice.repository.UserRepository;
 import com.example.callsdataservice.security.jwt.JwtUtils;
+import com.example.callsdataservice.services.ProfileService;
 import com.example.callsdataservice.security.services.UserDetailsImpl;
 import com.example.callsdataservice.security.services.UserDetailsServiceImpl;
+import com.example.callsdataservice.services.EmailService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,8 +22,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -51,12 +54,11 @@ public class UserController {
 
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
+    @Autowired
+    private EmailService emailService;
+    @Autowired
+    private ProfileService profileService;
 
-    @GetMapping("/all")
-    @ResponseBody
-    public List<User> all(){
-        return userDetailsService.getAll();
-    }
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
@@ -160,35 +162,23 @@ public class UserController {
     @PostMapping("/changepassword")
     public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest changePasswordRequest, HttpServletRequest httpServletRequest) {
         if (jwtUtils.validateJwtToken(httpServletRequest)) {
-            String username = changePasswordRequest.getUsername();
-            String oldPassword = changePasswordRequest.getOldPassword();
-            String newPassword = changePasswordRequest.getNewPassword();
-
-            Optional<User> optionalUser = userRepository.findByUsername(username);
-            if (optionalUser.isPresent()) {
-                User user = optionalUser.get();
-                if (encoder.matches(oldPassword, user.getPassword())) {
-                    String encodedNewPassword = encoder.encode(newPassword);
-                    user.setPassword(encodedNewPassword);
-                    userRepository.save(user);
-                    UserDetailsImpl userDetails = new UserDetailsImpl(user);
-                    Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    String newToken = jwtUtils.generateJwtToken(authentication);
-                    List<String> roles = userDetails.getAuthorities().stream()
-                            .map(GrantedAuthority::getAuthority)
-                            .collect(Collectors.toList());
-                    return ResponseEntity.ok(new JwtResponse(newToken,
-                            userDetails.getId(),
-                            userDetails.getUsername(),
-                            userDetails.getEmail(),
-                            userDetails.getLanguage(),
-                            roles));
-                }
-                return ResponseEntity
-                        .badRequest()
-                        .body(new MessageResponse("Something went wrong"));
+            UserDetailsImpl userDetails = profileService.changePassword(changePasswordRequest);
+            if (userDetails != null) {
+                Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                String newToken = jwtUtils.generateJwtToken(authentication);
+                List<String> roles = userDetails.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(Collectors.toList());
+                return ResponseEntity.ok(new JwtResponse(newToken,
+                        userDetails.getId(),
+                        userDetails.getUsername(),
+                        userDetails.getEmail(),
+                        userDetails.getLanguage(),
+                        roles));
             }
-
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Something went wrong"));
         }
         return ResponseEntity
                 .status(401).body(new MessageResponse("Unauthorized"));
@@ -215,5 +205,28 @@ public class UserController {
         }
         return ResponseEntity
                 .status(401).body(new MessageResponse("Unauthorized"));
+    }
+
+    @PostMapping("/sendemail")
+    public ResponseEntity<?> sendEmail(@Valid @RequestBody SendEmailRequest sendEmailRequest, HttpServletRequest httpServletRequest) throws IOException {
+        if (!jwtUtils.validateJwtToken(httpServletRequest)) {
+            return ResponseEntity.status(401).body(new MessageResponse("Unauthorized"));
+        }
+        String token = jwtUtils.extractTokenFromRequest(httpServletRequest);
+        String username = jwtUtils.getUserNameFromJwtToken(token);
+        Optional<User> optionalUser = userRepository.findByUsername(username);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            String emailTo = sendEmailRequest.getEmailTo();
+            String message = sendEmailRequest.getMessage();
+
+            if (emailTo == null || message == null || emailTo.isEmpty() || message.isEmpty()) {
+                return ResponseEntity.badRequest().body(new MessageResponse("Something went wrong"));
+            }
+
+            emailService.sendEmail(sendEmailRequest, user.getEmail());
+            return ResponseEntity.ok().body(new MessageResponse("Email sent"));
+        }
+        return ResponseEntity.badRequest().body(new MessageResponse("Something went wrong"));
     }
 }

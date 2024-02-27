@@ -1,15 +1,10 @@
 package com.example.callsdataservice.payload.request;
 
-import jakarta.validation.constraints.NotBlank;
-
 public class ChangePasswordRequest {
-    @NotBlank
     private String username;
 
-    @NotBlank
     private String oldPassword;
 
-    @NotBlank
     private String newPassword;
 
     public ChangePasswordRequest(String username, String oldPassword, String newPassword) {
