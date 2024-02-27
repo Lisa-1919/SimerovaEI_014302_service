@@ -49,6 +49,11 @@ public class UserDetailsImpl implements UserDetails {
 
     }
 
+    public UserDetailsImpl(String username, String password) {
+        this.username = username;
+        this.password = password;
+    }
+
 
     public static UserDetailsImpl build(User user) {
         List<GrantedAuthority> authorities = user.getRoleSet().stream()
