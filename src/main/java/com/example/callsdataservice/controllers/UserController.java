@@ -11,7 +11,6 @@ import com.example.callsdataservice.security.jwt.JwtUtils;
 import com.example.callsdataservice.services.ProfileService;
 import com.example.callsdataservice.security.services.UserDetailsImpl;
 import com.example.callsdataservice.security.services.UserDetailsServiceImpl;
-import com.example.callsdataservice.services.EmailService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,8 +25,8 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -54,8 +53,6 @@ public class UserController {
 
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
-    @Autowired
-    private EmailService emailService;
     @Autowired
     private ProfileService profileService;
 
@@ -159,7 +156,7 @@ public class UserController {
                 .status(401).body(new MessageResponse("Unauthorized"));
     }
 
-    @PostMapping("/changepassword")
+    @PostMapping("/change-password")
     public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest changePasswordRequest, HttpServletRequest httpServletRequest) {
         if (jwtUtils.validateJwtToken(httpServletRequest)) {
             UserDetailsImpl userDetails = profileService.changePassword(changePasswordRequest);
@@ -184,7 +181,7 @@ public class UserController {
                 .status(401).body(new MessageResponse("Unauthorized"));
     }
 
-    @PostMapping("/changelanguage")
+    @PostMapping("/change-language")
     public ResponseEntity<?> changeLanguage(@Valid @RequestBody ChangeLanguageRequest
                                                     changeLanguageRequest, HttpServletRequest httpServletRequest) {
         if (jwtUtils.validateJwtToken(httpServletRequest)) {
@@ -207,26 +204,22 @@ public class UserController {
                 .status(401).body(new MessageResponse("Unauthorized"));
     }
 
-    @PostMapping("/sendemail")
-    public ResponseEntity<?> sendEmail(@Valid @RequestBody SendEmailRequest sendEmailRequest, HttpServletRequest httpServletRequest) throws IOException {
-        if (!jwtUtils.validateJwtToken(httpServletRequest)) {
-            return ResponseEntity.status(401).body(new MessageResponse("Unauthorized"));
-        }
-        String token = jwtUtils.extractTokenFromRequest(httpServletRequest);
-        String username = jwtUtils.getUserNameFromJwtToken(token);
-        Optional<User> optionalUser = userRepository.findByUsername(username);
-        if (optionalUser.isPresent()) {
-            User user = optionalUser.get();
-            String emailTo = sendEmailRequest.getEmailTo();
-            String message = sendEmailRequest.getMessage();
+    @PostMapping("/upload-image")
+    public ResponseEntity<MessageResponse> changeImage(MultipartFile image, HttpServletRequest httpServletRequest){
+        if (jwtUtils.validateJwtToken(httpServletRequest)) {
+            Optional<User> optionalUser = userRepository.findByUsername(jwtUtils.getUserNameFromJwtToken(jwtUtils.extractTokenFromRequest(httpServletRequest)));
+            if (optionalUser.isPresent()) {
 
-            if (emailTo == null || message == null || emailTo.isEmpty() || message.isEmpty()) {
-                return ResponseEntity.badRequest().body(new MessageResponse("Something went wrong"));
+                return ResponseEntity
+                        .ok()
+                        .body(new MessageResponse("Image is saved"));
             }
-
-            emailService.sendEmail(sendEmailRequest, user.getEmail());
-            return ResponseEntity.ok().body(new MessageResponse("Email sent"));
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Something went wrong"));
         }
-        return ResponseEntity.badRequest().body(new MessageResponse("Something went wrong"));
+        return ResponseEntity
+                .status(401).body(new MessageResponse("Unauthorized"));
     }
+
 }
