@@ -1,4 +1,4 @@
-package com.example.callsdataservice.models;
+package com.example.callsdataservice.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -28,8 +28,8 @@ public class User {
     @Column(name = "language")
     private String language;
 
-    @Column(name = "image_name")
-    private String imageName;
+    @Column(name = "image_url")
+    private String imageUrl;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name="user_role",

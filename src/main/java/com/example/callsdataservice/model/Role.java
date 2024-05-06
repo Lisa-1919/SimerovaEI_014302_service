@@ -1,4 +1,4 @@
-package com.example.callsdataservice.models;
+package com.example.callsdataservice.model;
 
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;

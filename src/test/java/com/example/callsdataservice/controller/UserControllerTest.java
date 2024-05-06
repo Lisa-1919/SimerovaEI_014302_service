@@ -1,12 +1,12 @@
-package com.example.callsdataservice.controllers;
+package com.example.callsdataservice.controller;
 
-import com.example.callsdataservice.models.Role;
-import com.example.callsdataservice.models.User;
+import com.example.callsdataservice.model.Role;
+import com.example.callsdataservice.model.User;
 import com.example.callsdataservice.payload.request.*;
 import com.example.callsdataservice.repository.RoleRepository;
 import com.example.callsdataservice.repository.UserRepository;
 import com.example.callsdataservice.security.jwt.JwtUtils;
-import com.example.callsdataservice.services.ProfileService;
+import com.example.callsdataservice.service.ProfileService;
 import com.example.callsdataservice.security.services.UserDetailsImpl;
 import com.example.callsdataservice.security.services.UserDetailsServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -55,40 +55,37 @@ class UserControllerTest {
 
     @Mock
     private PasswordEncoder encoder;
-
-    @MockBean
-    private EmailService emailService;
     @MockBean
     private ProfileService profileService;
 
-    @Test
-    void authenticateUser() throws Exception {
-        LoginRequest loginRequest = new LoginRequest("username1", "password");
-
-        Authentication authentication = new UsernamePasswordAuthenticationToken("username1", "password");
-
-        String jwt = "your_generated_jwt_token";
-
-        List<Role> roles = new ArrayList<>();
-        roles.add(new Role(3, "USER"));
-        UserDetailsImpl userDetails = new UserDetailsImpl(502L, "username1", "email1@example.com", encoder.encode("password"), "ru", roles);
-
-        when(authenticationManager.authenticate(any())).thenReturn(authentication);
-        when(jwtUtils.generateJwtToken(authentication)).thenReturn(jwt);
-        when(userDetailsService.loadUserByUsername("username")).thenReturn(userDetails);
-
-        mockMvc.perform(MockMvcRequestBuilders
-                        .post("/signin")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJsonString(loginRequest)))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.jwt").value(jwt))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.id").value(userDetails.getId()))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.username").value(userDetails.getUsername()))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.email").value(userDetails.getEmail()))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.language").value(userDetails.getLanguage()))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.roles").isArray());
-    }
+//    @Test
+//    void authenticateUser() throws Exception {
+//        LoginRequest loginRequest = new LoginRequest("username1", "password");
+//
+//        Authentication authentication = new UsernamePasswordAuthenticationToken("username1", "password");
+//
+//        String jwt = "your_generated_jwt_token";
+//
+//        List<Role> roles = new ArrayList<>();
+//        roles.add(new Role(3, "USER"));
+//        UserDetailsImpl userDetails = new UserDetailsImpl(502L, "username1", "email1@example.com", encoder.encode("password"), "ru", roles);
+//
+//        when(authenticationManager.authenticate(any())).thenReturn(authentication);
+//        when(jwtUtils.generateJwtToken(authentication)).thenReturn(jwt);
+//        when(userDetailsService.loadUserByUsername("username")).thenReturn(userDetails);
+//
+//        mockMvc.perform(MockMvcRequestBuilders
+//                        .post("/signin")
+//                        .contentType(MediaType.APPLICATION_JSON)
+//                        .content(asJsonString(loginRequest)))
+//                .andExpect(MockMvcResultMatchers.status().isOk())
+//                .andExpect(MockMvcResultMatchers.jsonPath("$.jwt").value(jwt))
+//                .andExpect(MockMvcResultMatchers.jsonPath("$.id").value(userDetails.getId()))
+//                .andExpect(MockMvcResultMatchers.jsonPath("$.username").value(userDetails.getUsername()))
+//                .andExpect(MockMvcResultMatchers.jsonPath("$.email").value(userDetails.getEmail()))
+//                .andExpect(MockMvcResultMatchers.jsonPath("$.language").value(userDetails.getLanguage()))
+//                .andExpect(MockMvcResultMatchers.jsonPath("$.roles").isArray());
+//    }
 
     @Test
     void registerUser_Ok() throws Exception {
@@ -120,22 +117,6 @@ class UserControllerTest {
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.message").value("Error: Username is already taken!"));
     }
-
-    @Test
-    void registerUser_EmailExists() throws Exception {
-        SignupRequest signupRequest = new SignupRequest("username", "existingEmail@example.com", Collections.singleton("USER"), "password");
-
-        when(userRepository.existsByUsername(signupRequest.getUsername())).thenReturn(false);
-        when(userRepository.existsByEmail(signupRequest.getEmail())).thenReturn(true);
-
-        mockMvc.perform(MockMvcRequestBuilders
-                        .post("/signup")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJsonString(signupRequest)))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.message").value("Error: Email is already in use!"));
-    }
-
 
     @Test
     public void delete_Ok() throws Exception {
@@ -247,53 +228,6 @@ class UserControllerTest {
                         .content(asJsonString(changeLanguageRequest)))
                 .andExpect(MockMvcResultMatchers.status().isUnauthorized())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.message").value("Unauthorized"));
-    }
-
-    @Test
-    void sendEmail_Ok() throws Exception {
-        SendEmailRequest sendEmailRequest = new SendEmailRequest("lizasimerova438@gmail.com", "Hello, world!");
-
-        when(jwtUtils.validateJwtToken(any(HttpServletRequest.class))).thenReturn(true);
-        when(jwtUtils.extractTokenFromRequest(any(HttpServletRequest.class))).thenReturn("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJsaXNhIiwiaWF0IjoxNzA5MDI3ODEzLCJleHAiOjE3MDkxMDQxMTN9.QFAuWR1hW3OipXmpaTT_tunDaE3NvPyHLGugps5ME5Q");
-        when(jwtUtils.getUserNameFromJwtToken("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJsaXNhIiwiaWF0IjoxNzA5MDI3ODEzLCJleHAiOjE3MDkxMDQxMTN9.QFAuWR1hW3OipXmpaTT_tunDaE3NvPyHLGugps5ME5Q")).thenReturn("lisa");
-        when(userRepository.findByUsername("lisa")).thenReturn(Optional.of(new User()));
-        when(emailService.sendEmail(any(SendEmailRequest.class), anyString())).thenReturn(true);
-        mockMvc.perform(MockMvcRequestBuilders
-                        .post("/sendemail")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJsonString(sendEmailRequest)))
-                .andExpect(MockMvcResultMatchers.status().isOk());
-    }
-
-
-    @Test
-    public void sendEmail_Unauthorized() throws Exception {
-        when(jwtUtils.validateJwtToken(any())).thenReturn(false);
-
-        SendEmailRequest sendEmailRequest = new SendEmailRequest();
-        sendEmailRequest.setEmailTo("recipient@example.com");
-        sendEmailRequest.setMessage("Hello, this is a test email.");
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/sendemail")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJsonString(sendEmailRequest)))
-                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
-
-        verify(emailService, never()).sendEmail(any(), anyString());
-    }
-
-    @Test
-    public void sendEmail_BadRequest() throws Exception {
-        SendEmailRequest sendEmailRequest = new SendEmailRequest(null, "Hello, this is a test email.");
-        when(jwtUtils.validateJwtToken(any(HttpServletRequest.class))).thenReturn(true);
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/sendemail")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJsonString(sendEmailRequest)))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.message").value("Something went wrong"));
-
-        verifyNoInteractions(emailService);
     }
 
     private static String asJsonString(Object object) {

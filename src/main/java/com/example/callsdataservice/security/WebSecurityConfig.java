@@ -59,12 +59,13 @@ public class WebSecurityConfig{
                         auth.
                                 requestMatchers("/signup").permitAll()
                                 .requestMatchers("/signin").permitAll()
-                                .requestMatchers("/upload_img").permitAll()
-                                .requestMatchers("/changepassword").permitAll()
-                                .requestMatchers("/changelanguage").permitAll()
+                                .requestMatchers("/upload-image").permitAll()
+                                .requestMatchers("/change-password").permitAll()
+                                .requestMatchers("/change-language").permitAll()
                                 .requestMatchers("/logout").permitAll()
                                 .requestMatchers("/delete").permitAll()
                                 .requestMatchers("/all").permitAll()
+                                .requestMatchers("/images/**").permitAll()
                                 .anyRequest().authenticated()
                 ).logout(LogoutConfigurer::permitAll);
 

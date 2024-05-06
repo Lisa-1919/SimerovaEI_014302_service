@@ -1,7 +1,8 @@
 package com.example.callsdataservice.security.services;
 
-import com.example.callsdataservice.models.User;
+import com.example.callsdataservice.model.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -11,29 +12,27 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+
+@Getter
 public class UserDetailsImpl implements UserDetails {
     private static final long serialVersionUID = 1L;
-
     private Long id;
-
     private String username;
-
     private String email;
-
     @JsonIgnore
     private String password;
-
     private String language;
-
+    private String imageUrl;
     private Collection<? extends GrantedAuthority> authorities;
 
-    public UserDetailsImpl(Long id, String username, String email, String password, String language,
+    public UserDetailsImpl(Long id, String username, String email, String password, String language, String imageUrl,
                            Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.password = password;
         this.language = language;
+        this.imageUrl = imageUrl;
         this.authorities = authorities;
     }
     public UserDetailsImpl(User user) {
@@ -66,6 +65,7 @@ public class UserDetailsImpl implements UserDetails {
                 user.getEmail(),
                 user.getPassword(),
                 user.getLanguage(),
+                user.getImageUrl(),
                 authorities);
     }
 
@@ -73,19 +73,6 @@ public class UserDetailsImpl implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;
     }
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public String getLanguage() {
-        return language;
-    }
-
 
     @Override
     public String getPassword() {

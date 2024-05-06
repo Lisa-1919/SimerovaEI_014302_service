@@ -1,73 +1,42 @@
 package com.example.callsdataservice.payload.response;
 
-import java.util.List;
+import com.example.callsdataservice.model.User;
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.core.io.Resource;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Getter
+@Setter
 public class JwtResponse {
-    private String token;
+    private String accessToken;
     private String type = "Bearer";
     private Long id;
     private String username;
     private String email;
     private String language;
+    private String imageUrl;
     private List<String> roles;
 
+    public JwtResponse(String accessToken, Long id, String username, String email, String language, String imageUrl, List<String> roles) {
+        this.accessToken = accessToken;
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.language = language;
+        this.imageUrl = imageUrl;
+        this.roles = roles;
+    }
+
     public JwtResponse(String accessToken, Long id, String username, String email, String language, List<String> roles) {
-        this.token = accessToken;
+        this.accessToken = accessToken;
         this.id = id;
         this.username = username;
         this.email = email;
         this.language = language;
         this.roles = roles;
-    }
-
-    public String getAccessToken() {
-        return token;
-    }
-
-    public void setAccessToken(String accessToken) {
-        this.token = accessToken;
-    }
-
-    public String getTokenType() {
-        return type;
-    }
-
-    public void setTokenType(String tokenType) {
-        this.type = tokenType;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-    public String getLanguage() {
-        return language;
-    }
-
-    public void setLanguage(String language) {
-        this.language = language;
-    }
-
-    public List<String> getRoles() {
-        return roles;
     }
 }

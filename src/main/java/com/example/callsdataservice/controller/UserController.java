@@ -1,19 +1,24 @@
-package com.example.callsdataservice.controllers;
+package com.example.callsdataservice.controller;
 
-import com.example.callsdataservice.models.Role;
-import com.example.callsdataservice.models.User;
+import com.example.callsdataservice.model.Role;
+import com.example.callsdataservice.model.User;
 import com.example.callsdataservice.payload.request.*;
 import com.example.callsdataservice.payload.response.JwtResponse;
 import com.example.callsdataservice.payload.response.MessageResponse;
 import com.example.callsdataservice.repository.RoleRepository;
 import com.example.callsdataservice.repository.UserRepository;
 import com.example.callsdataservice.security.jwt.JwtUtils;
-import com.example.callsdataservice.services.ProfileService;
 import com.example.callsdataservice.security.services.UserDetailsImpl;
 import com.example.callsdataservice.security.services.UserDetailsServiceImpl;
+import com.example.callsdataservice.service.ProfileService;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,12 +26,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.apache.commons.io.IOUtils;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -38,45 +45,39 @@ import java.util.stream.Collectors;
 public class UserController {
     @Autowired
     private AuthenticationManager authenticationManager;
-
     @Autowired
     private UserRepository userRepository;
-
     @Autowired
     private RoleRepository roleRepository;
-
     @Autowired
     private PasswordEncoder encoder;
-
     @Autowired
     private JwtUtils jwtUtils;
-
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
     @Autowired
     private ProfileService profileService;
 
+    @Value("${upload.path}")
+    private String uploadImgPath;
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
 
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
-
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtils.generateJwtToken(authentication);
-
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
-
         return ResponseEntity.ok(new JwtResponse(jwt,
                 userDetails.getId(),
                 userDetails.getUsername(),
                 userDetails.getEmail(),
                 userDetails.getLanguage(),
+                userDetails.getImageUrl(),
                 roles));
     }
 
@@ -128,7 +129,6 @@ public class UserController {
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
 
-    @CrossOrigin(origins = "*")
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request) {
         if (jwtUtils.validateJwtToken(request)) {
@@ -140,21 +140,20 @@ public class UserController {
                 .status(401).body(new MessageResponse("Unauthorized"));
     }
 
-    @CrossOrigin(origins = "*")
     @PostMapping("/delete")
     public ResponseEntity<?> delete(HttpServletRequest request) {
-        String token = jwtUtils.extractTokenFromRequest(request);
         if (jwtUtils.validateJwtToken(request)) {
-            String username = jwtUtils.getUserNameFromJwtToken(token);
-            User user = userRepository.findByUsername(username).orElse(null);
-            userRepository.delete(user);
-            return ResponseEntity
-                    .ok()
-                    .body(new MessageResponse("deleted"));
+            String username = jwtUtils.getUserNameFromJwtToken(jwtUtils.extractTokenFromRequest(request));
+            return userRepository.findByUsername(username)
+                    .map(user -> {
+                        userRepository.delete(user);
+                        return ResponseEntity.ok(new MessageResponse("User deleted successfully."));
+                    })
+                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponse("User not found.")));
         }
-        return ResponseEntity
-                .status(401).body(new MessageResponse("Unauthorized"));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new MessageResponse("You are not authorized to perform this action."));
     }
+
 
     @PostMapping("/change-password")
     public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest changePasswordRequest, HttpServletRequest httpServletRequest) {
@@ -163,6 +162,7 @@ public class UserController {
             if (userDetails != null) {
                 Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 String newToken = jwtUtils.generateJwtToken(authentication);
+
                 List<String> roles = userDetails.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.toList());
@@ -171,6 +171,7 @@ public class UserController {
                         userDetails.getUsername(),
                         userDetails.getEmail(),
                         userDetails.getLanguage(),
+                        userDetails.getImageUrl(),
                         roles));
             }
             return ResponseEntity
@@ -204,15 +205,14 @@ public class UserController {
                 .status(401).body(new MessageResponse("Unauthorized"));
     }
 
-    @PostMapping("/upload-image")
-    public ResponseEntity<MessageResponse> changeImage(MultipartFile image, HttpServletRequest httpServletRequest){
+    @PostMapping(value = "/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> changeImage(@RequestParam("image") MultipartFile image, HttpServletRequest httpServletRequest) throws ServletException, IOException {
         if (jwtUtils.validateJwtToken(httpServletRequest)) {
             Optional<User> optionalUser = userRepository.findByUsername(jwtUtils.getUserNameFromJwtToken(jwtUtils.extractTokenFromRequest(httpServletRequest)));
             if (optionalUser.isPresent()) {
-
-                return ResponseEntity
-                        .ok()
-                        .body(new MessageResponse("Image is saved"));
+                User user = optionalUser.get();
+                user = profileService.uploadImage(image, user);
+                return ResponseEntity.ok().body(user.getImageUrl());
             }
             return ResponseEntity
                     .badRequest()
@@ -221,5 +221,15 @@ public class UserController {
         return ResponseEntity
                 .status(401).body(new MessageResponse("Unauthorized"));
     }
+
+    @GetMapping(value = "/images/{imageName}", produces = MediaType.IMAGE_JPEG_VALUE)
+    public byte[] getImage(@PathVariable String imageName) throws IOException {
+        String path = uploadImgPath + imageName;
+        File imageFile = new File(path);
+        InputStream in = new FileInputStream(imageFile);
+        return IOUtils.toByteArray(in);
+
+    }
+
 
 }

@@ -1,20 +1,25 @@
-package com.example.callsdataservice.services;
+package com.example.callsdataservice.service;
 
-import com.example.callsdataservice.models.User;
+import com.example.callsdataservice.model.User;
 import com.example.callsdataservice.payload.request.ChangePasswordRequest;
 import com.example.callsdataservice.repository.UserRepository;
 import com.example.callsdataservice.security.jwt.JwtUtils;
 import com.example.callsdataservice.security.services.UserDetailsImpl;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
+import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Service
 public class ProfileService {
@@ -24,6 +29,9 @@ public class ProfileService {
     private UserRepository userRepository;
     @Autowired
     private JwtUtils jwtUtils;
+    @Value("${upload.path}")
+    private String uploadImgPath;
+
     public UserDetailsImpl changePassword(ChangePasswordRequest changePasswordRequest){
         String username = changePasswordRequest.getUsername();
         String oldPassword = changePasswordRequest.getOldPassword();
@@ -38,6 +46,19 @@ public class ProfileService {
 
             return userDetails;
         } return null;
+    }
+
+    public  User uploadImage(MultipartFile image, User user){
+        if (image != null) {
+            String resultImgName = UUID.randomUUID() + "." + image.getOriginalFilename();
+            try {
+                image.transferTo(new File(uploadImgPath + resultImgName));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            user.setImageUrl(resultImgName);
+            return userRepository.save(user);
+        } return user;
     }
 
 }

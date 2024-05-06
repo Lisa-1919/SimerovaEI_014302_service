@@ -1,6 +1,6 @@
 package com.example.callsdataservice.repository;
 
-import com.example.callsdataservice.models.Role;
+import com.example.callsdataservice.model.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

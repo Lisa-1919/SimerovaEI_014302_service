@@ -1,6 +1,6 @@
 package com.example.callsdataservice.repository;
 
-import com.example.callsdataservice.models.User;
+import com.example.callsdataservice.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
