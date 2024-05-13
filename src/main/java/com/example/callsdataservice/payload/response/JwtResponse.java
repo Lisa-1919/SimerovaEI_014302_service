@@ -1,5 +1,8 @@
 package com.example.callsdataservice.payload.response;
 
+import com.example.callsdataservice.model.Call;
+import com.example.callsdataservice.model.CallHistory;
+import com.example.callsdataservice.model.CallUser;
 import com.example.callsdataservice.model.User;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,6 +23,7 @@ public class JwtResponse {
     private String language;
     private String imageUrl;
     private List<String> roles;
+    private List<CallHistory> callHistoryList;
 
     public JwtResponse(String accessToken, Long id, String username, String email, String language, String imageUrl, List<String> roles) {
         this.accessToken = accessToken;
@@ -29,6 +33,17 @@ public class JwtResponse {
         this.language = language;
         this.imageUrl = imageUrl;
         this.roles = roles;
+    }
+
+    public JwtResponse(String accessToken, Long id, String username, String email, String language, String imageUrl, List<String> roles, List<CallHistory> callHistoryList) {
+        this.accessToken = accessToken;
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.language = language;
+        this.imageUrl = imageUrl;
+        this.roles = roles;
+        this.callHistoryList = callHistoryList;
     }
 
     public JwtResponse(String accessToken, Long id, String username, String email, String language, List<String> roles) {

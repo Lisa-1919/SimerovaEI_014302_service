@@ -1,7 +1,13 @@
 package com.example.callsdataservice.service;
 
+import com.example.callsdataservice.model.Call;
+import com.example.callsdataservice.model.CallHistory;
+import com.example.callsdataservice.model.CallUser;
 import com.example.callsdataservice.model.User;
 import com.example.callsdataservice.payload.request.ChangePasswordRequest;
+import com.example.callsdataservice.payload.request.SaveCallRequest;
+import com.example.callsdataservice.repository.CallRepository;
+import com.example.callsdataservice.repository.CallUserRepository;
 import com.example.callsdataservice.repository.UserRepository;
 import com.example.callsdataservice.security.jwt.JwtUtils;
 import com.example.callsdataservice.security.services.UserDetailsImpl;
@@ -18,8 +24,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class ProfileService {
@@ -27,6 +33,10 @@ public class ProfileService {
     private PasswordEncoder encoder;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private CallRepository callRepository;
+    @Autowired
+    private CallUserRepository callUserRepository;
     @Autowired
     private JwtUtils jwtUtils;
     @Value("${upload.path}")
@@ -48,17 +58,66 @@ public class ProfileService {
         } return null;
     }
 
-    public  User uploadImage(MultipartFile image, User user){
+    public User uploadImage(MultipartFile image, User user) {
         if (image != null) {
+            String previousImageName = user.getImageUrl();
+
+            if (previousImageName != null && !previousImageName.isEmpty()) {
+                File previousImageFile = new File(uploadImgPath + previousImageName);
+                if (previousImageFile.exists()) {
+                    if (previousImageFile.delete()) {
+                        System.out.println("Previous image deleted successfully.");
+                    } else {
+                        System.out.println("Failed to delete previous image.");
+                    }
+                }
+            }
+
             String resultImgName = UUID.randomUUID() + "." + image.getOriginalFilename();
             try {
                 image.transferTo(new File(uploadImgPath + resultImgName));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+
             user.setImageUrl(resultImgName);
             return userRepository.save(user);
-        } return user;
+        }
+        return user;
     }
 
+    public List<CallHistory> getUserCalls(String username){
+        Optional<User> optionalUser = userRepository.findByUsername(username);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            return user.getCallUsers().stream()
+                    .map(callUser -> new CallHistory(
+                            callUser.getCall().getId(),
+                            callUser.getCall().getStartDate(),
+                            callUser.getCall().getEndDate(),
+                            callUser.getCall().getRoomId(),
+                            callUser.getLanguage()))
+                    .sorted(Comparator.comparing(CallHistory::getStartDate))
+                    .collect(Collectors.toList());
+        } else {
+            return null;
+        }
+    }
+
+    public void saveCall(User user, SaveCallRequest saveCallRequest){
+        Call call = new Call();
+        call.setStartDate(saveCallRequest.getStartTime());
+        call.setEndDate(saveCallRequest.getEndTime());
+        call.setRoomId(saveCallRequest.getRoomId());
+        callRepository.save(call);
+
+        CallUser callUser = new CallUser();
+        callUser.setUser(user);
+        callUser.setCall(call);
+        callUser.setLanguage(saveCallRequest.getLanguage());
+        callUserRepository.save(callUser);
+
+        user.getCallUsers().add(callUser);
+        userRepository.save(user);
+    }
 }

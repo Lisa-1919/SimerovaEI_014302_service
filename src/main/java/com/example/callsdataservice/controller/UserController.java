@@ -1,7 +1,6 @@
 package com.example.callsdataservice.controller;
 
-import com.example.callsdataservice.model.Role;
-import com.example.callsdataservice.model.User;
+import com.example.callsdataservice.model.*;
 import com.example.callsdataservice.payload.request.*;
 import com.example.callsdataservice.payload.response.JwtResponse;
 import com.example.callsdataservice.payload.response.MessageResponse;
@@ -72,13 +71,15 @@ public class UserController {
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
+        List<CallHistory> calls = profileService.getUserCalls(userDetails.getUsername());
         return ResponseEntity.ok(new JwtResponse(jwt,
                 userDetails.getId(),
                 userDetails.getUsername(),
                 userDetails.getEmail(),
                 userDetails.getLanguage(),
                 userDetails.getImageUrl(),
-                roles));
+                roles,
+                calls));
     }
 
     @PostMapping("/signup")
@@ -108,17 +109,14 @@ public class UserController {
             roles.add(userRole);
         } else {
             strRoles.forEach(role -> {
-                switch (role) {
-                    case "admin":
-                        Role adminRole = (Role) roleRepository.findByName("ADMIN")
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(adminRole);
-
-                        break;
-                    default:
-                        Role userRole = (Role) roleRepository.findByName("USER")
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(userRole);
+                if (role.equals("admin")) {
+                    Role adminRole = (Role) roleRepository.findByName("ADMIN")
+                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                    roles.add(adminRole);
+                } else {
+                    Role userRole = (Role) roleRepository.findByName("USER")
+                            .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                    roles.add(userRole);
                 }
             });
         }
@@ -231,5 +229,20 @@ public class UserController {
 
     }
 
-
+    @PostMapping("/save-call")
+    public ResponseEntity<?> saveCallInfo(@Valid @RequestBody SaveCallRequest saveCallRequest, HttpServletRequest httpServletRequest){
+        if (jwtUtils.validateJwtToken(httpServletRequest)) {
+            Optional<User> optionalUser = userRepository.findByUsername(jwtUtils.getUserNameFromJwtToken(jwtUtils.extractTokenFromRequest(httpServletRequest)));
+            if (optionalUser.isPresent()) {
+                profileService.saveCall(optionalUser.get(), saveCallRequest);
+                List<CallHistory> calls = profileService.getUserCalls(optionalUser.get().getUsername());
+                return ResponseEntity.ok().body(calls);
+            }
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Something went wrong"));
+        }
+        return ResponseEntity
+                .status(401).body(new MessageResponse("Unauthorized"));
+    }
 }

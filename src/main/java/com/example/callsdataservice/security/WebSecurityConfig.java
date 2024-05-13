@@ -66,6 +66,7 @@ public class WebSecurityConfig{
                                 .requestMatchers("/delete").permitAll()
                                 .requestMatchers("/all").permitAll()
                                 .requestMatchers("/images/**").permitAll()
+                                .requestMatchers("/save-call").permitAll()
                                 .anyRequest().authenticated()
                 ).logout(LogoutConfigurer::permitAll);
 
