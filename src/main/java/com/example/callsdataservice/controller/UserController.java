@@ -89,13 +89,11 @@ public class UserController {
                     .badRequest()
                     .body(new MessageResponse("Error: Username is already taken!"));
         }
-
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             return ResponseEntity
                     .badRequest()
-                    .body(new MessageResponse("Error: Email is already in use!"));
+                    .body(new MessageResponse("Error: Email is already taken!"));
         }
-
         User user = new User(signUpRequest.getUsername(),
                 signUpRequest.getEmail(),
                 encoder.encode(signUpRequest.getPassword()));
@@ -125,17 +123,6 @@ public class UserController {
         userRepository.save(user);
 
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
-    }
-
-    @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletRequest request) {
-        if (jwtUtils.validateJwtToken(request)) {
-            return ResponseEntity
-                    .ok()
-                    .body(new MessageResponse("logout"));
-        }
-        return ResponseEntity
-                .status(401).body(new MessageResponse("Unauthorized"));
     }
 
     @PostMapping("/delete")
@@ -226,7 +213,6 @@ public class UserController {
         File imageFile = new File(path);
         InputStream in = new FileInputStream(imageFile);
         return IOUtils.toByteArray(in);
-
     }
 
     @PostMapping("/save-call")
