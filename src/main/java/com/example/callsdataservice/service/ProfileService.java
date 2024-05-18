@@ -1,9 +1,6 @@
 package com.example.callsdataservice.service;
 
-import com.example.callsdataservice.model.Call;
-import com.example.callsdataservice.model.CallHistory;
-import com.example.callsdataservice.model.CallUser;
-import com.example.callsdataservice.model.User;
+import com.example.callsdataservice.model.*;
 import com.example.callsdataservice.payload.request.ChangePasswordRequest;
 import com.example.callsdataservice.payload.request.SaveCallRequest;
 import com.example.callsdataservice.repository.CallRepository;
@@ -90,7 +87,6 @@ public class ProfileService {
             User user = optionalUser.get();
             return user.getCallUsers().stream()
                     .map(callUser -> new CallHistory(
-                            callUser.getCall().getId(),
                             callUser.getCall().getStartDate(),
                             callUser.getCall().getEndDate(),
                             callUser.getCall().getRoomId(),
@@ -113,9 +109,14 @@ public class ProfileService {
         callUser.setUser(user);
         callUser.setCall(call);
         callUser.setLanguage(saveCallRequest.getLanguage());
+        CallUserKey callUserKey = new CallUserKey();
+        callUserKey.setCallId(call.getId());
+        callUserKey.setUserId(user.getId());
+        callUser.setId(callUserKey);
         callUserRepository.save(callUser);
 
         user.getCallUsers().add(callUser);
         userRepository.save(user);
     }
+
 }
